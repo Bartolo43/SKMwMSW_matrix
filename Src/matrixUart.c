@@ -20,12 +20,12 @@ const uint8_t ENTER_CHAR = 0x0d;
 const uint8_t ESC_CHAR = 0x1b;
 const uint8_t BACKSPACE_CHAR = 0x08;
 
-dict dictList[DICTIONARY_SIZE] =
+const volatile dict dictList[DICTIONARY_SIZE] =
 {
-        { .key = "arrow NE", .value = {0b00000000, 0b00000010, 0b00000100, 0b01001000, 0b01010000, 0b01100000, 0b01111000, 0b00000000} },
-        { .key = "arrow NW", .value = {0b00000000, 0b01111000, 0b01100000, 0b01010000, 0b01001000, 0b00000100, 0b00000010, 0b00000000} },
-        { .key = "arrow SE", .value = {0b00000000, 0b01000000, 0b00100000, 0b00010010, 0b00001010, 0b00000110, 0b00011110, 0b00000000} },
-        { .key = "arrow SW", .value = {0b00000000, 0b00011110, 0b00000110, 0b00001010, 0b00010010, 0b00100000, 0b01000000, 0b00000000} },
+        { .key = "arrow SE", .value = {0b00000000, 0b00000010, 0b00000100, 0b01001000, 0b01010000, 0b01100000, 0b01111000, 0b00000000} },
+        { .key = "arrow SW", .value = {0b00000000, 0b01111000, 0b01100000, 0b01010000, 0b01001000, 0b00000100, 0b00000010, 0b00000000} },
+        { .key = "arrow NE", .value = {0b00000000, 0b01000000, 0b00100000, 0b00010010, 0b00001010, 0b00000110, 0b00011110, 0b00000000} },
+        { .key = "arrow NW", .value = {0b00000000, 0b00011110, 0b00000110, 0b00001010, 0b00010010, 0b00100000, 0b01000000, 0b00000000} },
         { .key = "sign 90", .value = {0b00000000, 0b01001110, 0b01001010, 0b01111110, 0b00000000, 0b01111110, 0b01000010, 0b01111110} },
         { .key = "question", .value = {0b00000000, 0b00000000, 0b00000010, 0b10110001, 0b00010001, 0b00001110, 0b00000000, 0b00000000} }
 
@@ -39,18 +39,15 @@ char buffer[BUFFER_SIZE];
 volatile int bufferCounter = 0;
 extern UART_HandleTypeDef huart2;
 extern uint8_t flagSPI;
-extern dict *current_dictionary;
+extern dict current_dictionary;
 State stateMachine = OFF;
-extern uint8_t index;
-/*****************************
- * ***********************\
+/*****************************************************\
 * Private function
 \****************************************************/
 // send one byte through USART
 void usart_send(const char chr) {
    while(!(USART2->ISR & USART_ISR_TC));
-   USART2->TDR = chr;
-
+   	   USART2->TDR = chr;
 }
 
 // send a string through USART
@@ -94,8 +91,8 @@ void handleOnState()
 	{
 		if(strcmp(buffer, dictList[i].key) == 0)
 		{
-			//index = i;
-			//flagSPI=1;
+			current_dictionary.key = dictList[i].key;
+			memcpy(current_dictionary.value,dictList[i].value, 8);
 			usart_send_string("\nIT WORKS");
 			flag = 1;
 			break;
@@ -159,7 +156,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		usart_send(received);
 
 		HAL_UART_Receive_IT(&huart2, &received, 1); // Ponowne włączenie nasłuchiwania
-		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+		//HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 
 		if(bufferCounter >= BUFFER_SIZE) clearBuffer();
 	}

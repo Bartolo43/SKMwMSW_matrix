@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -46,9 +47,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-volatile dict* current_dictionary;
-volatile uint8_t flagSPI = 0;
-volatile uint8_t index = 0;
+volatile dict current_dictionary;
+volatile Matrix_struct matrix1;
+//volatile uint8_t index = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,7 +86,6 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  //const uint8_t stop[8] = { 0b00111100, 0b01000010, 0b10000001, 0b10000001, 0b10000001, 0b10000001, 0b01000010, 0b00111100};
 
 
   /* USER CODE END SysInit */
@@ -94,23 +94,20 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_SPI2_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
+  dict test1 = { .key = "arrow NE", .value = {0b00000000, 0b00000010, 0b00000100, 0b01001000, 0b01010000, 0b01100000, 0b01111000, 0b00000000} };
 
-  Matrix_struct matrix1;
+
   matrix_init(CS1_GPIO_Port, CS1_Pin, &matrix1);
   matrix_clear(&matrix1);
 
- matrix_LED_on_row(&matrix1, 1, 0b00111100);
-  matrix_LED_on_row(&matrix1, 2, 0b01000010);
- matrix_LED_on_row(&matrix1, 3, 0b10000001);
- matrix_LED_on_row(&matrix1, 4, 0b10000001);
- matrix_LED_on_row(&matrix1, 5, 0b10000001);
-  matrix_LED_on_row(&matrix1, 6, 0b10000001);
-  matrix_LED_on_row(&matrix1, 7, 0b01000010);
-  matrix_LED_on_row(&matrix1, 8, 0b00111100);
+  matrix_send_cmd(&matrix1, &test1);
 
-  matrix_update_all();
   UART_INTERRUPT_INIT();
+  HAL_TIM_Base_Start_IT(&htim16);
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -120,13 +117,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-	  if (flagSPI==1)
-	  {
-		  //memcpy(current_dictionary->value,dictList[i].value, 8);
-		  matrix_send_cmd(&matrix1, &current_dictionary);
-		  flagSPI=0;
-	  }
 
 
   }
@@ -188,7 +178,17 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if(htim->Instance == TIM16)
+	{ // Jeżeli przerwanie pochodzi od timera 10
+		//HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+		if (&matrix1 != NULL)
+		{
+			matrix_send_cmd(&matrix1, &current_dictionary);
+		}
 
+	}
+}
 /* USER CODE END 4 */
 
 /**
